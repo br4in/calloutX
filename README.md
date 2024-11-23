@@ -1,8 +1,11 @@
 # CalloutX: Callout Icons Explorer
 CalloutX is an Obsidian plugin that allows you to view, manage, and customise callout icons in your vault. It provides an easy way to explore, visualise, and modify the callout icons defined in your custom CSS.
 
-![screenshot](https://i.imgur.com/eB26W2A.png)
-![screenshot](https://i.imgur.com/XScvwMC.png)
+
+|                                                |                                                |
+| :--------------------------------------------: | ---------------------------------------------- |
+| ![screenshot](https://i.imgur.com/eB26W2A.png) | ![screenshot](https://i.imgur.com/XScvwMC.png) |
+
 
 ## Features
 
