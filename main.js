@@ -318,6 +318,7 @@ class AddCalloutModal extends Modal {
                     });
                     this.plugin.saveCallouts();
                     this.close();
+                    this.plugin.updateIconColor(this.callout.name, this.callout.color);
                     if (this.plugin.settingsTab) { this.plugin.settingsTab.display(); }
                 }));
     }
