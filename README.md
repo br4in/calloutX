@@ -48,5 +48,4 @@ Replace `your-callout-name` with the desired callout name and `icon-name` wi
 CalloutX is designed to work with desktop versions of Obsidian. It may not function correctly on mobile devices.
 
 ## Support
-___
 If you encounter any issues or have suggestions for improvements, please open an issue on the GitHub repository.
