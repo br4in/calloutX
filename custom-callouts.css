@@ -1,0 +1,181 @@
+.callout[data-callout="pro"] {
+    --callout-color: 65, 201, 108;
+    --callout-icon: thumbs-up;
+}
+
+.callout[data-callout="con"] {
+    --callout-color: 255, 84, 84;
+    --callout-icon: thumbs-down;
+}
+
+.callout[data-callout="idea"] {
+    --callout-color: 225, 255, 0;
+    --callout-icon: lightbulb;
+}
+
+.callout[data-callout="related"] {
+    --callout-color: 184, 148, 255;
+    --callout-icon: shuffle;
+}
+
+.callout[data-callout="comment"] {
+    --callout-color: 184, 148, 255;
+    --callout-icon: message-circle;
+}
+
+.callout[data-callout="code"] {
+    --callout-color: 184, 148, 255;
+    --callout-icon: code-2;
+}
+
+.callout[data-callout="shopping-cart"] {
+    --callout-color: 184, 148, 255;
+    --callout-icon: shopping-cart;
+}
+
+.callout[data-callout="network"] {
+    --callout-color: 77, 224, 185;
+    --callout-icon: network;
+}
+
+.callout[data-callout="moon"] {
+    --callout-color: 159, 167, 188;
+    --callout-icon: moon;
+}
+
+.callout[data-callout="alarm-clock"] {
+    --callout-color: 0, 238, 90;
+    --callout-icon: alarm-clock;
+}
+
+.callout[data-callout="laptop"] {
+    --callout-color: 65, 201, 108;
+    --callout-icon: laptop;
+}
+
+.callout[data-callout="align-left"] {
+    --callout-color: 184, 148, 255;
+    --callout-icon: align-left;
+}
+
+.callout[data-callout="briefcase"] {
+    --callout-color: 184, 148, 255;
+    --callout-icon: briefcase;
+}
+
+.callout[data-callout="laugh"] {
+    --callout-color: 77, 224, 185;
+    --callout-icon: laugh;
+}
+
+.callout[data-callout="wand"] {
+    --callout-color: 74, 176, 255;
+    --callout-icon: wand;
+}
+
+.callout[data-callout="heart"] {
+    --callout-color: 255, 84, 84;
+    --callout-icon: heart;
+}
+
+.callout[data-callout="skull"] {
+    --callout-color: 159, 167, 188;
+    --callout-icon: skull;
+}
+
+.callout[data-callout="home"] {
+    --callout-color: 74, 176, 255;
+    --callout-icon: home;
+}
+
+.callout[data-callout="map"] {
+    --callout-color: 65, 201, 108;
+    --callout-icon: map;
+}
+
+.callout[data-callout="document"] {
+    --callout-color: 74, 176, 255;
+    --callout-icon: file-text;
+}
+
+.callout[data-callout="documents"] {
+    --callout-color: 65, 201, 108;
+    --callout-icon: folders;
+}
+
+.callout[data-callout="map-pin"] {
+    --callout-color: 74, 176, 255;
+    --callout-icon: map-pin;
+}
+
+.callout[data-callout="brain"] {
+    --callout-color: 74, 176, 255;
+    --callout-icon: brain;
+}
+
+.callout[data-callout="person"] {
+    --callout-color: 74, 176, 255;
+    --callout-icon: person-standing;
+}
+
+.callout[data-callout="flower"] {
+    --callout-color: 65, 201, 108;
+    --callout-icon: flower-2;
+}
+
+.callout[data-callout="video"] {
+    --callout-color: 255, 84, 84;
+    --callout-icon: youtube;
+}
+
+.callout[data-callout="money"] {
+    --callout-color: 65, 201, 108;
+    --callout-icon: piggy-bank;
+}
+
+.callout[data-callout="clover"] {
+    --callout-color: 65, 201, 108;
+    --callout-icon: clover;
+}
+
+.callout[data-callout="glasses"] {
+    --callout-color: 65, 201, 108;
+    --callout-icon: glasses;
+}
+
+.callout[data-callout="megaphone"] {
+    --callout-color: 255, 84, 84;
+    --callout-icon: megaphone;
+}
+
+.callout[data-callout="star"] {
+    --callout-color: 251, 255, 0;
+    --callout-icon: star;
+}
+
+.callout[data-callout="origami"] {
+    --callout-color: 251, 79, 60;
+    --callout-icon: origami;
+}
+
+.callout[data-callout="paw"] {
+    --callout-color: 217, 216, 205;
+    --callout-icon: paw-print;
+}
+
+.callout[data-callout="shield"] {
+    --callout-color: 200, 100, 0;
+    --callout-icon: shield;
+}
+
+.callout[data-callout="camp"] {
+    --callout-color: 227, 2, 2;
+    --callout-icon: flame-kindling;
+}
+
+.callout[data-callout="alarm"] {
+    --callout-color: 43, 253, 57;
+    --callout-icon: alarm-clock;
+}
+
+.callout.is-collapsible .callout-title { cursor: pointer; }
