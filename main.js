@@ -31,7 +31,7 @@ class CalloutXPlugin extends Plugin {
             cssPath = path.join(this.app.vault.configDir, 'snippets', 'custom-callouts.css');
             cssFile = `${basePath}/${cssPath}`;
         } else {
-            Notice('CalloutX only works on Desktop');
+            new Notice('CalloutX only works on Desktop');
         }
 
         try {
@@ -392,23 +392,52 @@ class CalloutIconsModal extends Modal {
         contentEl.empty();
         contentEl.createEl('h2', {text: 'Custom Callout Icons'});
 
-        const iconList = contentEl.createEl('div', {cls: 'callout-icon-list-modal'});
+        const searchInput = contentEl.createEl('input', {
+            type: 'text',
+            placeholder: 'Search callouts...',
+            cls: 'search-input'
+        });
+        searchInput.addEventListener('input', () => {
+            this.displayFilteredCallouts(searchInput.value);
+        });
 
+        this.iconList = contentEl.createEl('div', {cls: 'callout-icon-list-modal'});
         this.app.dom.appContainerEl.addClass('blur-background');
 
-        this.callouts.forEach(callout => {
-            const iconContainer = iconList.createEl('div', {
+        this.displayCallouts(this.callouts);
+    }
+
+    displayFilteredCallouts(searchTerm) {
+        const filteredCallouts = this.callouts.filter(callout =>
+            callout.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            callout.icon.toLowerCase().includes(searchTerm.toLowerCase())
+        );
+        this.displayCallouts(filteredCallouts);
+    }
+
+    displayCallouts(callouts) {
+        this.iconList.empty();
+        callouts.forEach(callout => {
+            const iconContainer = this.iconList.createEl('div', {
                 cls: 'callout-icon-container-modal'
             });
-
             const iconEl = iconContainer.createEl('div', { cls: `callout-icon-preview callout-icon-${callout.name}` });
             setIcon(iconEl, callout.icon);
-
             iconContainer.createEl('div', {
                 text: callout.name,
                 attr: {'style': 'font-size: 13px;'}
             });
+            iconEl.addEventListener('click', () => {
+                const template = this.createCalloutTemplate(callout.name);
+                navigator.clipboard.writeText(template);
+                new Notice('Template copied to clipboard.');
+            });
         });
+    }
+
+    createCalloutTemplate(icon) {
+        return `> [!${icon}] Title
+> Contents`;
     }
 
     onClose() {
