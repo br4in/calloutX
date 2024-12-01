@@ -1,227 +1,126 @@
-const { Plugin, PluginSettingTab, Setting, Modal, FileSystemAdapter, Notice, setIcon } = require('obsidian');
-const path = require('path');
-const fs = require('fs').promises;
+'use strict';
 
-class CalloutXPlugin extends Plugin {
-    callouts = [];
-    settingsTab;
+var obsidian = require('obsidian');
 
-    async onload() {
-        await this.loadCallouts();
-        this.settingsTab = new CalloutIconsSettingTab(this.app, this);
-        this.addSettingTab(this.settingsTab);
-        this.loadStyles();
-        this.loadIconStyles();
-
-
-        this.addCommand({
-            id: 'show-callout-icons',
-            name: 'Show Callout Icons',
-            callback: () => {
-                new CalloutIconsModal(this.app, this.callouts).open();
-            }
-        });
+class EditCalloutModal extends obsidian.Modal {
+    constructor(app, plugin, callout, styleUtils) {
+        super(app);
+        this.plugin = plugin;
+        this.callout = callout;
+        this.styleUtils = styleUtils;
     }
 
-    async loadCallouts() {
-        let basePath, cssPath, cssFile;
+    onOpen() {
+        const {contentEl} = this;
+        contentEl.createEl('h2', {text: 'Edit callout'});
 
-        if (this.app.vault.adapter instanceof FileSystemAdapter) {
-            basePath = this.app.vault.adapter.getBasePath();
-            cssPath = path.join(this.app.vault.configDir, 'snippets', 'custom-callouts.css');
-            cssFile = `${basePath}/${cssPath}`;
-        } else {
-            new Notice('CalloutX only works on Desktop');
-        }
+        new obsidian.Setting(contentEl)
+            .setName('Callout name')
+            .addText(text => text
+                .setValue(this.callout.name)
+                .onChange(value => this.callout.name = value));
 
-        try {
-            const cssContent = await fs.readFile(cssFile, 'utf8');
-            const regex = /\.callout\[data-callout="([\w-]+)"\]\s*{[^}]*--callout-color:\s*(\d+,\s*\d+,\s*\d+)[^}]*--callout-icon:\s*([\w-]+)[^}]*}/g;
-            let match;
-
-            while ((match = regex.exec(cssContent)) !== null) {
-                this.callouts.push({
-                    name: match[1],
-                    color: match[2],
-                    icon: match[3]
-                });
-            }
-        } catch (error) {
-            console.log('custom-callouts.css not found in the snippets folder, importing it...');
-            this.importCustomCalloutsFile();
-        }
-    }
-
-    async saveCallouts() {
-        if (this.app.vault.adapter instanceof FileSystemAdapter) {
-            const basePath = this.app.vault.adapter.getBasePath();
-            const cssPath = path.join(this.app.vault.configDir, 'snippets', 'custom-callouts.css');
-            const cssFile = `${basePath}/${cssPath}`;
-
-            let cssContent = '';
-            this.callouts.forEach(callout => {
-                cssContent += `.callout[data-callout="${callout.name}"] {
-    --callout-color: ${callout.color};
-    --callout-icon: ${callout.icon};
-}\n\n`;
+        new obsidian.Setting(contentEl)
+            .setName('Callout color')
+            .addText(text => {
+                text.inputEl.type = 'color';
+                const hexColor = '#' + this.callout.color.split(', ').map(c => parseInt(c).toString(16).padStart(2, '0')).join('');
+                text.setValue(hexColor)
+                    .onChange(value => {
+                        this.callout.color = value.slice(1).match(/.{2}/g).map(hex => parseInt(hex, 16)).join(', ');
+                    });
             });
 
-            cssContent += `.callout.is-collapsible .callout-title { cursor: pointer; }`
+        new obsidian.Setting(contentEl)
+            .setName('Callout icon')
+            .addText(text => text
+                .setValue(this.callout.icon)
+                .onChange(value => this.callout.icon = value));
 
-            try {
-                await fs.writeFile(cssFile, cssContent, 'utf8');
-                new Notice('Custom callouts saved successfully');
-            } catch (error) {
-                console.error('Error saving custom callouts:', error);
-                new Notice('Error saving custom callouts');
-            }
-        }
+        new obsidian.Setting(contentEl)
+            .addButton(button => button
+                .setButtonText('Save')
+                .onClick(() => {
+                    this.plugin.saveCallouts();
+                    this.styleUtils.reloadIconStyles();
+                    this.close();
+                    if (this.plugin.settingsTab) { this.plugin.settingsTab.display(); }
+                }));
     }
 
-    async importCustomCalloutsFile() {
-        if (this.app.vault.adapter instanceof FileSystemAdapter) {
-            const basePath = this.app.vault.adapter.getBasePath();
-            const pluginPath = path.join(basePath, '.obsidian', 'plugins', 'calloutX');
-            const snippetsPath = path.join(basePath, '.obsidian', 'snippets');
-            const sourceFile = path.join(pluginPath, 'custom-callouts.css');
-            const destFile = path.join(snippetsPath, 'custom-callouts.css');
-
-            try {
-                await fs.access(sourceFile);
-                await fs.mkdir(snippetsPath, { recursive: true });
-                await fs.copyFile(sourceFile, destFile);
-                console.log('custom-callouts.css imported successfully to snippets folder');
-                this.loadCallouts();
-            } catch (error) {
-                if (error.code === 'ENOENT') {
-                    console.log('custom-callouts.css not found in plugin folder');
-                } else {
-                    console.error('Error moving custom-callouts.css:', error);
-                }
-            }
-        } else {
-            new Notice('CalloutX only works on Desktop');
-        }
+    onClose() {
+        const {contentEl} = this;
+        contentEl.empty();
     }
-
-    loadStyles() {
-        const styleEl = document.createElement('style');
-        styleEl.id = 'callout-icons-styles';
-        document.head.appendChild(styleEl);
-
-        styleEl.textContent = `
-            .callout-icon-list {
-                display: flex;
-                justify-content: center;
-            }
-            .callout-icon-container {
-                margin: 10px;
-                text-align: center;
-                display: inline-block;
-            }
-            .callout-icon-preview {
-                font-size: 32px;
-                width: 32px;
-                height: 32px;
-                margin: 5px auto;
-            }
-            .callout-icon-preview svg {
-                font-size: 32px;
-            }
-
-            .callout-icons-settings {
-                padding: 16px;
-            }
-            .callout-icons-settings h2 {
-                margin-bottom: 16px;
-            }
-            .callout-list {
-                margin-top: 20px;
-            }
-            .callout-item {
-                display: flex;
-                align-items: center;
-                padding: 8px;
-                border-bottom: 1px solid var(--background-modifier-border);
-            }
-            .callout-item:last-child {
-                border-bottom: none;
-            }
-            .callout-item span {
-                flex-grow: 1;
-            }
-            .callout-item button {
-                margin-left: 8px;
-            }
-            .search-input {
-                width: 100%;
-                margin-bottom: 16px;
-            }
-            .add-callout-button {
-                margin-top: 16px;
-            }
-
-            ${this.callouts.map(callout => `
-            .callout-icon-${callout.name} svg {
-                color: rgb(${callout.color});
-            }
-            `).join('')}
-
-            .callout-icon-list-modal {
-                display: flex;
-                flex-wrap: wrap;
-                justify-content: left;
-            }
-            .callout-icon-container-modal {
-                margin: 10px;
-                text-align: center;
-            }
-
-            .blur-background {
-                filter: blur(5px);
-                transition: filter 0.3s ease;
-            }
-        `;
-    }
-
-    loadIconStyles() {
-        const styleEl = document.createElement('style');
-        styleEl.id = 'callout-icons-dynamic-styles';
-        document.head.appendChild(styleEl);
-    }
-
-    updateIconColor(calloutName, color) {
-        const styleEl = document.getElementById('callout-icons-dynamic-styles');
-        if (styleEl) {
-            const existingRuleIndex = Array.from(styleEl.sheet.cssRules).findIndex(
-                rule => rule.selectorText === `.callout-icon-${calloutName} svg`
-            );
-
-            const rule = `.callout-icon-${calloutName} svg { color: rgb(${color}); }`;
-
-            if (existingRuleIndex !== -1) {
-                styleEl.sheet.deleteRule(existingRuleIndex);
-                styleEl.sheet.insertRule(rule, existingRuleIndex);
-            } else {
-                styleEl.sheet.insertRule(rule, styleEl.sheet.cssRules.length);
-            }
-        }
-    }
-
 }
 
-class CalloutIconsSettingTab extends PluginSettingTab {
-    constructor(app, plugin) {
+class AddCalloutModal extends obsidian.Modal {
+    constructor(app, plugin, styleUtils) {
+        super(app);
+        this.plugin = plugin;
+        this.styleUtils = styleUtils;
+    }
+
+    onOpen() {
+        const {contentEl} = this;
+        contentEl.createEl('h2', {text: 'Add new callout'});
+
+        new obsidian.Setting(contentEl)
+            .setName('Callout name')
+            .addText(text => this.nameInput = text);
+
+        new obsidian.Setting(contentEl)
+            .setName('Callout color')
+            .addText(text => {
+                this.colorInput = text;
+                this.colorInput.inputEl.type = 'color';
+                this.colorInput.inputEl.value = '#34AB34';
+            });
+
+        new obsidian.Setting(contentEl)
+            .setName('Callout icon')
+            .addText(text => this.iconInput = text);
+
+        contentEl.createEl('a', {
+            text: 'Browse Lucide.dev icons',
+            href: 'https://lucide.dev/'
+        });
+
+        new obsidian.Setting(contentEl)
+            .addButton(button => button
+                .setButtonText('Add')
+                .onClick(async () => {
+                    const colorValue = this.colorInput.getValue().slice(1).match(/.{2}/g).map(hex => parseInt(hex, 16)).join(', ');
+                    this.plugin.callouts.push({
+                        name: this.nameInput.getValue(),
+                        color: colorValue,
+                        icon: this.iconInput.getValue()
+                    });
+
+                    await this.plugin.saveCallouts();
+                    this.styleUtils.reloadIconStyles(this.plugin.callouts);
+                    this.close();
+                    if (this.plugin.settingsTab) { this.plugin.settingsTab.display(); }
+                }));
+    }
+
+    onClose() {
+        const {contentEl} = this;
+        contentEl.empty();
+    }
+}
+
+class CalloutIconsSettingTab extends obsidian.PluginSettingTab {
+    constructor(app, plugin, styleUtils) {
         super(app, plugin);
         this.plugin = plugin;
+        this.styleUtils = styleUtils;
     }
 
     display() {
         const {containerEl} = this;
         containerEl.empty();
         containerEl.addClass('callout-icons-settings');
-
-        containerEl.createEl('h2', {text: 'Callout Icons Settings'});
 
         const searchInput = containerEl.createEl('input', {
             type: 'text',
@@ -232,13 +131,13 @@ class CalloutIconsSettingTab extends PluginSettingTab {
             this.displayFilteredCallouts(searchInput.value);
         });
 
-        new Setting(containerEl)
-            .setName('Add New Callout')
+        new obsidian.Setting(containerEl)
+            .setName('Add new callout')
             .setDesc('Add a new custom callout')
             .addButton(button => button
-                .setButtonText('Add Callout')
+                .setButtonText('Add callout')
                 .onClick(() => {
-                    new AddCalloutModal(this.app, this.plugin).open();
+                    new AddCalloutModal(this.app, this.plugin, this.styleUtils).open();
                 }));
 
         this.calloutListEl = containerEl.createEl('div', {cls: 'callout-list'});
@@ -246,8 +145,8 @@ class CalloutIconsSettingTab extends PluginSettingTab {
     }
 
     displayFilteredCallouts(searchTerm) {
-        const filteredCallouts = this.plugin.callouts.filter(callout => 
-            callout.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
+        const filteredCallouts = this.plugin.callouts.filter(callout =>
+            callout.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
             callout.icon.toLowerCase().includes(searchTerm.toLowerCase())
         );
         this.displayCalloutList(filteredCallouts);
@@ -259,7 +158,9 @@ class CalloutIconsSettingTab extends PluginSettingTab {
         callouts.forEach(callout => {
             const calloutEl = this.calloutListEl.createEl('div', {cls: 'callout-item'});
             const iconEl = calloutEl.createEl('div', { cls: `callout-icon-preview callout-icon-${callout.name}` });
-            setIcon(iconEl, callout.icon);
+            obsidian.setIcon(iconEl, callout.icon);
+            // Ensure the latest custom color
+            iconEl.querySelector('svg').style.color = `rgb(${callout.color})`;
 
             calloutEl.createEl('span', {
                 text: `${callout.name} (${callout.icon})`});
@@ -267,121 +168,21 @@ class CalloutIconsSettingTab extends PluginSettingTab {
 
             const editButton = calloutEl.createEl('button', {text: 'Edit'});
             editButton.onclick = () => {
-                new EditCalloutModal(this.app, this.plugin, callout).open();
+                new EditCalloutModal(this.app, this.plugin, callout, this.styleUtils).open();
             };
 
             const deleteButton = calloutEl.createEl('button', {text: 'Delete'});
             deleteButton.onclick = () => {
                 this.plugin.callouts = this.plugin.callouts.filter(c => c.name !== callout.name);
-                this.plugin.saveCallouts();
+                this.plugin.saveCallouts(this.plugin.callouts);
+                this.styleUtils.reloadIconStyles(this.plugin.callouts);
                 this.displayCalloutList();
             };
         });
     }
 }
 
-class AddCalloutModal extends Modal {
-    constructor(app, plugin) {
-        super(app);
-        this.plugin = plugin;
-    }
-
-    onOpen() {
-        const {contentEl} = this;
-        contentEl.createEl('h2', {text: 'Add New Callout'});
-
-        new Setting(contentEl)
-            .setName('Callout Name')
-            .addText(text => this.nameInput = text);
-
-        new Setting(contentEl)
-            .setName('Callout Color')
-            .addText(text => {
-                this.colorInput = text;
-                this.colorInput.inputEl.type = 'color';
-                this.colorInput.inputEl.value = '#000000';
-            });
-
-        new Setting(contentEl)
-            .setName('Callout Icon')
-            .addText(text => this.iconInput = text);
-
-        new Setting(contentEl)
-            .addButton(button => button
-                .setButtonText('Add')
-                .onClick(() => {
-                    const colorValue = this.colorInput.getValue().slice(1).match(/.{2}/g).map(hex => parseInt(hex, 16)).join(', ');
-                    this.plugin.callouts.push({
-                        name: this.nameInput.getValue(),
-                        color: colorValue,
-                        icon: this.iconInput.getValue()
-                    });
-                    this.plugin.saveCallouts();
-                    this.close();
-                    this.plugin.updateIconColor(this.callout.name, this.callout.color);
-                    if (this.plugin.settingsTab) { this.plugin.settingsTab.display(); }
-                }));
-    }
-
-    onClose() {
-        const {contentEl} = this;
-        contentEl.empty();
-    }
-}
-
-class EditCalloutModal extends Modal {
-    constructor(app, plugin, callout) {
-        super(app);
-        this.plugin = plugin;
-        this.callout = callout;
-    }
-
-    onOpen() {
-        const {contentEl} = this;
-        contentEl.createEl('h2', {text: 'Edit Callout'});
-
-        new Setting(contentEl)
-            .setName('Callout Name')
-            .addText(text => text
-                .setValue(this.callout.name)
-                .onChange(value => this.callout.name = value));
-
-        new Setting(contentEl)
-            .setName('Callout Color')
-            .addText(text => {
-                text.inputEl.type = 'color';
-                const hexColor = '#' + this.callout.color.split(', ').map(c => parseInt(c).toString(16).padStart(2, '0')).join('');
-                text.setValue(hexColor)
-                    .onChange(value => {
-                        this.callout.color = value.slice(1).match(/.{2}/g).map(hex => parseInt(hex, 16)).join(', ');
-                    });
-            });
-
-        new Setting(contentEl)
-            .setName('Callout Icon')
-            .addText(text => text
-                .setValue(this.callout.icon)
-                .onChange(value => this.callout.icon = value));
-
-        new Setting(contentEl)
-            .addButton(button => button
-                .setButtonText('Save')
-                .onClick(() => {
-                    this.plugin.saveCallouts();
-                    this.close();
-                    this.plugin.updateIconColor(this.callout.name, this.callout.color);
-                    if (this.plugin.settingsTab) { this.plugin.settingsTab.display(); }
-                }));
-    }
-
-    onClose() {
-        const {contentEl} = this;
-        contentEl.empty();
-    }
-}
-
-
-class CalloutIconsModal extends Modal {
+class CalloutIconsModal extends obsidian.Modal {
     constructor(app, callouts) {
         super(app);
         this.callouts = callouts;
@@ -390,7 +191,7 @@ class CalloutIconsModal extends Modal {
     onOpen() {
         const {contentEl} = this;
         contentEl.empty();
-        contentEl.createEl('h2', {text: 'Custom Callout Icons'});
+        contentEl.createEl('h2', {text: 'Custom callout icons'});
 
         const searchInput = contentEl.createEl('input', {
             type: 'text',
@@ -422,7 +223,7 @@ class CalloutIconsModal extends Modal {
                 cls: 'callout-icon-container-modal'
             });
             const iconEl = iconContainer.createEl('div', { cls: `callout-icon-preview callout-icon-${callout.name}` });
-            setIcon(iconEl, callout.icon);
+            obsidian.setIcon(iconEl, callout.icon);
             iconContainer.createEl('div', {
                 text: callout.name,
                 attr: {'style': 'font-size: 13px;'}
@@ -430,7 +231,8 @@ class CalloutIconsModal extends Modal {
             iconEl.addEventListener('click', () => {
                 const template = this.createCalloutTemplate(callout.name);
                 navigator.clipboard.writeText(template);
-                new Notice('Template copied to clipboard.');
+                new obsidian.Notice('Template copied to clipboard.');
+                this.close();
             });
         });
     }
@@ -444,6 +246,177 @@ class CalloutIconsModal extends Modal {
         const {contentEl} = this;
         contentEl.empty();
         this.app.dom.appContainerEl.removeClass('blur-background');
+    }
+}
+
+class CalloutUtils {
+  constructor(app, callouts) {
+    this.app = app;
+    this.callouts = [];
+  }
+
+  async loadCallouts() {
+    let cssPath;
+    if (this.app.vault.adapter instanceof obsidian.FileSystemAdapter) {
+      cssPath = `${this.app.vault.configDir}/snippets/custom-callouts.css`;
+    } else {
+      new obsidian.Notice('CalloutX only works on Desktop');
+      return;
+    }
+
+    try {
+      const cssContent = await this.app.vault.adapter.read(cssPath);
+      const regex = /\.callout\[data-callout="([\w-]+)"\]\s*{[^}]*--callout-color:\s*(\d+,\s*\d+,\s*\d+)[^}]*--callout-icon:\s*([\w-]+)[^}]*}/g;
+      let match;
+      while ((match = regex.exec(cssContent)) !== null) {
+        this.callouts.push({
+          name: match[1],
+          color: match[2],
+          icon: match[3]
+        });
+      }
+      return this.callouts;
+    } catch (error) {
+      new obsidian.Notice('custom-callouts.css not found in the snippets folder, importing it...');
+      await this.importCustomCalloutsFile();
+    }
+  }
+
+  async saveCallouts(callouts) {
+    if (this.app.vault.adapter instanceof obsidian.FileSystemAdapter) {
+      const cssPath = `${this.app.vault.configDir}/snippets/custom-callouts.css`;
+      let cssContent = '';
+      callouts.forEach(callout => {
+        cssContent += `.callout[data-callout="${callout.name}"] {
+          --callout-color: ${callout.color};
+          --callout-icon: ${callout.icon};
+        }\n\n`;
+      });
+      cssContent += `.callout.is-collapsible .callout-title { cursor: pointer; }`;
+
+      try {
+        await this.app.vault.adapter.write(cssPath, cssContent);
+        new obsidian.Notice('Custom callouts saved successfully');
+      } catch (error) {
+        console.error('Error saving custom callouts:', error);
+        new obsidian.Notice('Error saving custom callouts');
+      }
+    } else {
+      new obsidian.Notice('CalloutX only works on Desktop');
+    }
+  }
+
+  async importCustomCalloutsFile() {
+    if (this.app.vault.adapter instanceof obsidian.FileSystemAdapter) {
+      const pluginPath = `${this.app.vault.configDir}/plugins/calloutX`;
+      const snippetsPath = `${this.app.vault.configDir}/snippets`;
+      const sourceFile = `${pluginPath}/custom-callouts.css`;
+      const destFile = `${snippetsPath}/custom-callouts.css`;
+
+      try {
+        const sourceContent = await this.app.vault.adapter.read(sourceFile);
+        await this.app.vault.adapter.write(destFile, sourceContent);
+        new obsidian.Notice('custom-callouts.css imported successfully to snippets folder');
+        await this.loadCallouts();
+      } catch (error) {
+        if (error.message.includes('ENOENT')) {
+          console.log('custom-callouts.css not found in plugin folder');
+        } else {
+          console.error('Error moving custom-callouts.css:', error);
+        }
+      }
+    } else {
+      new obsidian.Notice('CalloutX only works on Desktop');
+    }
+  }
+}
+
+class StyleUtils {
+    constructor (callouts) {
+        this.callouts = callouts;
+    }
+
+    loadIconStyles() {
+        const styleEl = document.createElement('style');
+        styleEl.id = 'callout-icons-styles';
+        document.head.appendChild(styleEl);
+
+        styleEl.textContent = `
+            ${this.callouts.map(callout => `
+            .callout-icon-${callout.name} svg {
+                color: rgb(${callout.color});
+            }
+            `).join('')}
+        `;
+    }
+
+    reloadIconStyles(callouts = this.callouts) {
+        const styleEl = document.getElementById('callout-icons-styles');
+        if (styleEl) {
+            styleEl.textContent = `
+                ${callouts.map(callout => `
+                .callout-icon-${callout.name} svg {
+                    color: rgb(${callout.color});
+                }
+                `).join('')}
+            `;
+        }
+    }
+
+}
+
+class CalloutXPlugin extends obsidian.Plugin {
+    callouts = [];
+    settingsTab;
+
+    addStyle(cssString) {
+        const styleElement = document.createElement('style');
+        styleElement.id = 'calloutx-style';
+        styleElement.textContent = cssString;
+        document.head.appendChild(styleElement);
+    }
+
+    async onload() {
+        this.calloutUtils = new CalloutUtils(this.app);
+        this.callouts = await this.calloutUtils.loadCallouts();
+
+        // Load CSS
+        const styleCssPath = this.manifest.dir + '/style.css';
+        try {
+            const styleCss = await this.app.vault.adapter.read(styleCssPath);
+            if (styleCss) this.addStyle(styleCss);
+        } catch (error) {
+            console.error('Error loading CSS files:', error);
+        }
+
+        // Load dynamic css
+        this.styleUtils = new StyleUtils(this.callouts);
+        this.styleUtils.loadIconStyles();
+
+        this.settingsTab = new CalloutIconsSettingTab(this.app, this, this.styleUtils);
+        this.addSettingTab(this.settingsTab);
+
+        this.addCommand({
+            id: 'show-callout-icons',
+            name: 'Show callout icons',
+            callback: () => {
+                new CalloutIconsModal(this.app, this.callouts).open();
+            }
+        });
+    }
+
+    async saveCallouts(callouts = this.callouts) {
+        await this.calloutUtils.saveCallouts(callouts);
+    }
+
+    async importCustomCalloutsFile() {
+        await this.calloutUtils.importCustomCalloutsFile();
+    }
+
+    async onunload() {
+        // Remove added stylesheets
+        document.querySelector('#calloutx-style').remove();
+        document.querySelector('#callout-icons-styles').remove();
     }
 }
 

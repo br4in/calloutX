@@ -1,0 +1,66 @@
+.callout-icon-list {
+    display: flex;
+    justify-content: center;
+}
+.callout-icon-container {
+    margin: 10px;
+    text-align: center;
+    display: inline-block;
+}
+.callout-icon-preview {
+    font-size: 32px;
+    width: 32px;
+    height: 32px;
+    margin: 5px auto;
+}
+.callout-icon-preview svg {
+    font-size: 32px;
+}
+
+.callout-icons-settings {
+    padding: 16px;
+}
+.callout-icons-settings h2 {
+    margin-bottom: 16px;
+}
+.callout-list {
+    margin-top: 20px;
+}
+.callout-item {
+    display: flex;
+    align-items: center;
+    padding: 8px;
+    border-bottom: 1px solid var(--background-modifier-border);
+}
+.callout-item:last-child {
+    border-bottom: none;
+}
+.callout-item span {
+    flex-grow: 1;
+}
+.callout-item button {
+    margin-left: 8px;
+}
+.search-input {
+    width: 100%;
+    margin: 25px auto;
+}
+.add-callout-button {
+    margin-top: 16px;
+}
+
+.callout-icon-list-modal {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: left;
+}
+.callout-icon-container-modal {
+    margin: 10px;
+    text-align: center;
+    cursor: pointer;
+}
+
+.blur-background {
+    filter: blur(5px);
+    transition: filter 0.3s ease;
+}
